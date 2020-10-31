@@ -110,6 +110,9 @@ def info_send_client():
 
 
 def ultra_send_client():
+    global distance
+    distance = 0
+
     ultra_IP = addr[0]
     ultra_PORT = 2257   #Define port serial 
     ultra_ADDR = (ultra_IP, ultra_PORT)
@@ -120,7 +123,10 @@ def ultra_send_client():
         while ultrasonicMode:
             try:
                 if not FindColorMode:
-                    ultra_Socket.send(str(round(ultra.checkdist(),2)).encode())
+                    distance = ultra.checkdist()
+                    ultra_Socket.send(str(round(distance,2)).encode())
+                    if direction_command == 'forward' and distance < 0.3:
+                        move.motorStop()
                     time.sleep(0.5)
                     continue
                 fpv.UltraData(round(ultra.checkdist(),2))
@@ -140,7 +146,7 @@ def  ap_thread():
 
 
 def run():
-    global direction_command, turn_command, pos_input, catch_input, cir_input, ultrasonicMode, FindLineMode, FindColorMode, SportModeOn
+    global direction_command, distance, turn_command, pos_input, catch_input, cir_input, ultrasonicMode, FindLineMode, FindColorMode, SportModeOn
     move.setup()
     findline.setup()
 
@@ -180,10 +186,12 @@ def run():
 
         elif 'forward' == data:
             direction_command = 'forward'
-            if SportModeOn:
-                move.move(speed_set, direction_command, turn_command, rad)
-            else:
-                move.move(SpeedBase, direction_command, turn_command, rad)
+            distance = ultra.checkdist()
+            if distance > 0.3:
+                if SportModeOn:
+                    move.move(speed_set, direction_command, turn_command, rad)
+                else:
+                    move.move(SpeedBase, direction_command, turn_command, rad)
         elif 'backward' == data:
             direction_command = 'backward'
             if SportModeOn:
@@ -287,6 +295,7 @@ if __name__ == '__main__':
         print('Use "sudo pip3 install rpi_ws281x" to install WS_281x package')
         pass
 
+    print("Starting server...")
     while  1:
         try:
             s =socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
